@@ -1,3 +1,31 @@
+# Configuración común a todos los perfiles.
+# Lo específico de cada entorno vive en application-<perfil>.yaml.
 spring:
   application:
     name: omnitrucks
+  profiles:
+    # Si no se indica un perfil al arrancar, se usa el de desarrollo.
+    default: dev
+  jpa:
+    # Evita que la sesión de Hibernate quede abierta durante toda la request
+    # y oculte consultas lazy fuera de la capa de servicio.
+    open-in-view: false
+    hibernate:
+      # El esquema lo maneja Flyway. Hibernate solo valida que las entidades
+      # coincidan con la base; si no coinciden, la aplicación no arranca.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,15 @@
+# Perfil de producción.
+# Toda la configuración sensible viene de variables de entorno, sin valores
+# por defecto: si falta alguna, la aplicación no arranca.
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: false
+
+management:
+  endpoint:
+    health:
+      show-details: never

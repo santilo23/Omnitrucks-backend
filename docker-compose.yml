@@ -1,0 +1,29 @@
+# Base de datos para desarrollo local.
+#
+# Se expone en el puerto 5433 (y no en el 5432 por defecto) para no chocar
+# con una instalación local de PostgreSQL que ya esté usando ese puerto.
+#
+# Levantar:  docker compose up -d
+# Apagar:    docker compose down
+# Borrar los datos también:  docker compose down -v
+services:
+  db:
+    image: postgres:17
+    container_name: omnitrucks-db
+    environment:
+      POSTGRES_DB: omnitrucks
+      POSTGRES_USER: omnitrucks
+      POSTGRES_PASSWORD: omnitrucks
+      TZ: UTC
+    ports:
+      - "5433:5432"
+    volumes:
+      - omnitrucks_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omnitrucks -d omnitrucks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  omnitrucks_data:

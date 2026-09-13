@@ -1,0 +1,25 @@
+# Perfil de desarrollo local.
+# Los valores por defecto apuntan al PostgreSQL de docker-compose.yml y se
+# pueden sobreescribir con variables de entorno.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/omnitrucks}
+    username: ${DB_USERNAME:omnitrucks}
+    password: ${DB_PASSWORD:omnitrucks}
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  # Escuchar en todas las interfaces de red, no solo en localhost, para que
+  # la app en el celular pueda llegar al backend usando la IP de la PC.
+  address: 0.0.0.0
+
+management:
+  endpoint:
+    health:
+      # En desarrollo se muestra el detalle de cada componente (base de datos,
+      # disco, etc.). En producción queda oculto.
+      show-details: always

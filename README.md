@@ -57,19 +57,23 @@ Según el rol del usuario, la vista cambia:
 docker compose up -d
 ```
 
-Esto arranca PostgreSQL en `localhost:5432` con la base `omnitrucks`. Los datos persisten en un volumen de Docker entre reinicios.
+Esto arranca PostgreSQL 17 en `localhost:5433` con la base `omnitrucks` (usuario y contraseña `omnitrucks`). Los datos persisten en un volumen de Docker entre reinicios.
+
+> Se usa el puerto **5433** y no el 5432 por defecto para no chocar con un PostgreSQL instalado localmente. Si preferís usar otra base, sobreescribí `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` con variables de entorno.
 
 **2. Arrancar la aplicación**
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,sim
+./mvnw spring-boot:run
 ```
 
 En Windows con PowerShell:
 
 ```bash
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev,sim"
+.\mvnw.cmd spring-boot:run
 ```
+
+Si no se indica perfil, arranca con `dev`. Para elegir otro: `-Dspring-boot.run.profiles=dev,sim`.
 
 **3. Verificar que anda**
 
@@ -77,7 +81,17 @@ En Windows con PowerShell:
 curl http://localhost:8080/actuator/health
 ```
 
-Debería responder `{"status":"UP"}`.
+Debería responder `"status":"UP"`, con el detalle del componente `db` también en `UP`.
+
+---
+
+## Problemas conocidos
+
+**`invalid value for parameter "TimeZone": "America/Buenos_Aires"`** — En Windows con zona horaria de Argentina, Java informa un nombre de zona antiguo que PostgreSQL rechaza al conectar. Ya está resuelto: la aplicación fija la JVM en UTC al iniciar (`OmnitrucksApplication`). Si aparece al correr otra herramienta Java contra la base, agregar `-Duser.timezone=UTC`.
+
+**La app móvil no llega al backend** — El servidor ya escucha en toda la red (`server.address: 0.0.0.0` en el perfil `dev`). Si igual no responde desde el celular:
+- Verificar la IP actual de la PC con `ipconfig`: el router puede cambiarla de un día para otro, y hay que actualizar el `.env` de la app.
+- Permitir Java en el Firewall de Windows para **redes privadas**. Desde la propia PC la conexión funciona igual aunque el firewall esté bloqueando, así que la prueba válida es abrir `http://IP_DE_LA_PC:8080/actuator/health` en Safari desde el celular.
 
 ---
 
@@ -157,8 +171,8 @@ El proyecto se construye por etapas, cada una verificable de forma independiente
 
 **Fase 1 — Backend con datos simulados**
 
-- [ ] Etapa 0 — Docker Compose y preparación del entorno
-- [ ] Etapa 1 — Cimientos: perfiles, Flyway, Actuator, manejo de errores
+- [x] Etapa 0 — Docker Compose y preparación del entorno
+- [x] Etapa 1 — Cimientos: perfiles, Flyway, Actuator, manejo de errores
 - [ ] Etapa 2 — CRUD de camiones
 - [ ] Etapa 3 — Viajes y máquina de estados
 - [ ] Etapa 4 — Ingesta y consulta de posiciones
