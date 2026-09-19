@@ -19,7 +19,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-@WebMvcTest
+// Se limita a un controlador de prueba: sin el atributo `controllers`, la
+// prueba levantaría todos los controladores reales de la aplicación y fallaría
+// por los servicios que necesitan.
+@WebMvcTest(controllers = GlobalExceptionHandlerTest.ControladorDePrueba.class)
 @Import(GlobalExceptionHandlerTest.ControladorDePrueba.class)
 class GlobalExceptionHandlerTest {
 

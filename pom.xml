@@ -88,6 +88,24 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!--
+						La JVM debe arrancar en UTC. En Windows con zona horaria de
+						Argentina, Java informa "America/Buenos_Aires": un alias viejo
+						que el driver le manda a PostgreSQL al conectar y que las
+						versiones nuevas rechazan con
+						'invalid value for parameter "TimeZone"'.
+					-->
+					<jvmArguments>-Duser.timezone=UTC</jvmArguments>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<!-- Misma razón que arriba, para la JVM de los tests. -->
+					<argLine>-Duser.timezone=UTC</argLine>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

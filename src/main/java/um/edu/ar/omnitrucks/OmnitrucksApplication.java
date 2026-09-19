@@ -9,13 +9,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class OmnitrucksApplication {
 
 	/*
-	 * Toda la aplicación trabaja en UTC. Se fija en un bloque estático para que
-	 * aplique antes de abrir cualquier conexión, también cuando la clase la carga
-	 * un test y no se ejecuta main().
+	 * Toda la aplicación trabaja en UTC.
 	 *
-	 * Además evita un error real: en Windows con zona Argentina, Java informa
-	 * "America/Buenos_Aires", un alias viejo que el driver le envía a PostgreSQL
-	 * al conectarse y que las versiones nuevas rechazan.
+	 * Ojo: esto NO alcanza por sí solo. El bloque estático corre recién cuando
+	 * Java inicializa esta clase, y Spring puede abrir la conexión a la base
+	 * antes de eso. La garantía real es arrancar la JVM con -Duser.timezone=UTC,
+	 * que el pom.xml ya configura para `spring-boot:run` y para los tests.
+	 * Esto queda como red de seguridad para cuando se ejecuta el jar empaquetado.
 	 */
 	static {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));

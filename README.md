@@ -155,6 +155,23 @@ src/main/java/um/edu/ar/omnitrucks/
 
 ---
 
+## Endpoints disponibles
+
+### Camiones
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/camiones` | Lista los camiones activos, ordenados por patente. Con `?incluirInactivos=true` trae también los dados de baja. |
+| `GET` | `/api/camiones/{id}` | Trae un camión. `404` si no existe. |
+| `POST` | `/api/camiones` | Crea un camión. Devuelve `201` con la cabecera `Location`. `409` si la patente ya existe. |
+| `PUT` | `/api/camiones/{id}` | Edita un camión. |
+| `DELETE` | `/api/camiones/{id}` | Baja lógica: marca `activo = false`, no borra el registro. Devuelve `204`. |
+| `POST` | `/api/camiones/{id}/reactivar` | Vuelve a dar de alta un camión. |
+
+La patente acepta los dos formatos argentinos (`ABC123` y `AB123CD`) y se normaliza a mayúsculas sin espacios antes de guardarla.
+
+---
+
 ## Convenciones del proyecto
 
 - **El esquema lo maneja Flyway**, no Hibernate. `ddl-auto` está en `validate`: si una entidad no coincide con la base, la aplicación no arranca. Todo cambio de esquema es una migración nueva en `src/main/resources/db/migration`.
@@ -173,7 +190,7 @@ El proyecto se construye por etapas, cada una verificable de forma independiente
 
 - [x] Etapa 0 — Docker Compose y preparación del entorno
 - [x] Etapa 1 — Cimientos: perfiles, Flyway, Actuator, manejo de errores
-- [ ] Etapa 2 — CRUD de camiones
+- [x] Etapa 2 — CRUD de camiones
 - [ ] Etapa 3 — Viajes y máquina de estados
 - [ ] Etapa 4 — Ingesta y consulta de posiciones
 - [ ] Etapa 5 — Simulador de recorridos
