@@ -229,9 +229,29 @@ El proyecto se construye por etapas, cada una verificable de forma independiente
 
 ## Tests
 
+### Automatizados
+
 ```bash
 ./mvnw verify
 ```
+
+Corren contra la base de PostgreSQL de `docker compose`, así que hay que tenerla levantada. Cada test se ejecuta dentro de una transacción que se revierte al terminar.
+
+### Postman
+
+En `postman/` hay una colección con las pruebas de humo de la API: salud del servicio y CRUD completo de camiones, incluidos los casos de error (patente duplicada, datos inválidos, recurso inexistente).
+
+Para usarla desde Postman: importar los dos archivos de `postman/` y seleccionar el entorno *OmniTrucks local*. Conviene correr la carpeta completa y en orden, porque los requests se encadenan: el de creación guarda el id y la patente en variables que usan los siguientes.
+
+La misma colección se puede correr desde la consola, sin abrir Postman:
+
+```bash
+npx newman run postman/OmniTrucks.postman_collection.json -e postman/OmniTrucks.postman_environment.json
+```
+
+En ambos casos el backend tiene que estar levantado. Si se prueba desde otra máquina o desde el celular, cambiar `baseUrl` en el entorno por la IP de la PC.
+
+Cada corrida deja un camión nuevo en la base de desarrollo, con una patente generada al azar para no chocar con las anteriores. Para limpiar todo: `docker compose down -v`.
 
 ---
 

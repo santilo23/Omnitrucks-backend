@@ -1,0 +1,465 @@
+{
+  "info": {
+    "name": "OmniTrucks API",
+    "description": "Pruebas de humo de la API de OmniTrucks: salud del servicio y CRUD de camiones.\n\nCada request trae sus aserciones, así que la colección sirve tanto para probar a mano desde Postman como para correrse entera desde la consola con Newman:\n\n    npx newman run postman/OmniTrucks.postman_collection.json -e postman/OmniTrucks.postman_environment.json\n\nRequiere el backend levantado (`./mvnw spring-boot:run`) y la base de datos arriba (`docker compose up -d`).\n\nLos requests se apoyan entre sí: el de creación guarda el id y la patente en variables, y los siguientes las usan. Conviene correr la carpeta completa y en orden.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "patente", "value": "" },
+    { "key": "camionId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Salud",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Verifica que la aplicación responda y que la conexión a PostgreSQL esté sana. Es lo mismo que consulta la app móvil para mostrar su indicador de conexión."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const cuerpo = pm.response.json();",
+                  "",
+                  "pm.test('El servicio está UP', () => {",
+                  "    pm.expect(cuerpo.status).to.eql('UP');",
+                  "});",
+                  "",
+                  "pm.test('La base de datos está UP', () => {",
+                  "    pm.expect(cuerpo.components.db.status).to.eql('UP');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Camiones",
+      "item": [
+        {
+          "name": "Crear camión",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Se genera una patente al azar con formato Mercosur (AB123CD) para que",
+                  "// la colección se pueda correr muchas veces sin chocar con la anterior.",
+                  "const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';",
+                  "const letra = () => letras[Math.floor(Math.random() * letras.length)];",
+                  "const digito = () => Math.floor(Math.random() * 10);",
+                  "",
+                  "const patente = `${letra()}${letra()}${digito()}${digito()}${digito()}${letra()}${letra()}`;",
+                  "pm.collectionVariables.set('patente', patente);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 201 Created', () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test('Incluye la cabecera Location', () => {",
+                  "    pm.expect(pm.response.headers.get('Location')).to.be.a('string');",
+                  "});",
+                  "",
+                  "const camion = pm.response.json();",
+                  "",
+                  "pm.test('Devuelve los datos enviados', () => {",
+                  "    pm.expect(camion.id).to.be.a('number');",
+                  "    pm.expect(camion.patente).to.eql(pm.collectionVariables.get('patente'));",
+                  "    pm.expect(camion.marca).to.eql('Scania');",
+                  "    pm.expect(camion.capacidadKg).to.eql(30000);",
+                  "});",
+                  "",
+                  "pm.test('Nace activo y con fecha de alta', () => {",
+                  "    pm.expect(camion.activo).to.be.true;",
+                  "    pm.expect(camion.createdAt).to.not.be.empty;",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('camionId', camion.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patente\": \"{{patente}}\",\n    \"marca\": \"Scania\",\n    \"modelo\": \"R450\",\n    \"anio\": 2020,\n    \"capacidadKg\": 30000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones"]
+            },
+            "description": "Da de alta un camión. Guarda el id en una variable para los requests siguientes."
+          }
+        },
+        {
+          "name": "Obtener el camión creado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones/{{camionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones", "{{camionId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Es el camión que creamos', () => {",
+                  "    const camion = pm.response.json();",
+                  "    pm.expect(String(camion.id)).to.eql(String(pm.collectionVariables.get('camionId')));",
+                  "    pm.expect(camion.patente).to.eql(pm.collectionVariables.get('patente'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar camiones activos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const camiones = pm.response.json();",
+                  "",
+                  "pm.test('Devuelve una lista', () => pm.expect(camiones).to.be.an('array'));",
+                  "",
+                  "pm.test('Incluye el camión creado', () => {",
+                  "    const patentes = camiones.map(c => c.patente);",
+                  "    pm.expect(patentes).to.include(pm.collectionVariables.get('patente'));",
+                  "});",
+                  "",
+                  "pm.test('Viene ordenada por patente', () => {",
+                  "    const patentes = camiones.map(c => c.patente);",
+                  "    pm.expect(patentes).to.eql([...patentes].sort());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actualizar el camión",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patente\": \"{{patente}}\",\n    \"marca\": \"Volvo\",\n    \"modelo\": \"FH16\",\n    \"anio\": 2022,\n    \"capacidadKg\": 35000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones/{{camionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones", "{{camionId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Quedaron los datos nuevos', () => {",
+                  "    const camion = pm.response.json();",
+                  "    pm.expect(camion.marca).to.eql('Volvo');",
+                  "    pm.expect(camion.modelo).to.eql('FH16');",
+                  "    pm.expect(camion.capacidadKg).to.eql(35000);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechaza patente duplicada",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patente\": \"{{patente}}\",\n    \"marca\": \"Otra marca\",\n    \"modelo\": \"Otro modelo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones"]
+            },
+            "description": "Intenta crear un segundo camión con una patente que ya existe. Debe fallar con 409."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409 Conflict', () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.test('Explica el conflicto en formato ProblemDetail', () => {",
+                  "    const problema = pm.response.json();",
+                  "    pm.expect(problema.title).to.eql('Conflicto');",
+                  "    pm.expect(problema.status).to.eql(409);",
+                  "    pm.expect(problema.detail).to.include(pm.collectionVariables.get('patente'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechaza datos inválidos",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"patente\": \"HOLA\",\n    \"marca\": \"\",\n    \"modelo\": \"R450\",\n    \"capacidadKg\": -5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones"]
+            },
+            "description": "Patente con formato inválido, marca vacía y capacidad negativa. La respuesta trae un error por campo, que es lo que la app muestra debajo de cada input."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400 Bad Request', () => pm.response.to.have.status(400));",
+                  "",
+                  "const problema = pm.response.json();",
+                  "",
+                  "pm.test('Indica que los datos son inválidos', () => {",
+                  "    pm.expect(problema.title).to.eql('Datos inválidos');",
+                  "});",
+                  "",
+                  "pm.test('Detalla el error de cada campo', () => {",
+                  "    pm.expect(problema.errores.patente).to.be.a('string');",
+                  "    pm.expect(problema.errores.marca).to.be.a('string');",
+                  "    pm.expect(problema.errores.capacidadKg).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Camión inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones/999999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones", "999999999"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 404 Not Found', () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test('Lo informa en formato ProblemDetail', () => {",
+                  "    const problema = pm.response.json();",
+                  "    pm.expect(problema.title).to.eql('Recurso no encontrado');",
+                  "    pm.expect(problema.status).to.eql(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dar de baja el camión",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones/{{camionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones", "{{camionId}}"]
+            },
+            "description": "La baja es lógica: marca el camión como inactivo pero no borra el registro, porque los viajes históricos lo siguen referenciando."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 204 No Content', () => pm.response.to.have.status(204));",
+                  "",
+                  "pm.test('No devuelve cuerpo', () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El camión dado de baja no aparece en el listado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Ya no está entre los activos', () => {",
+                  "    const patentes = pm.response.json().map(c => c.patente);",
+                  "    pm.expect(patentes).to.not.include(pm.collectionVariables.get('patente'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pero sigue existiendo como inactivo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones?incluirInactivos=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones"],
+              "query": [{ "key": "incluirInactivos", "value": "true" }]
+            },
+            "description": "Confirma que la baja fue lógica: el registro sigue ahí, marcado como inactivo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Aparece con activo en false', () => {",
+                  "    const patente = pm.collectionVariables.get('patente');",
+                  "    const camion = pm.response.json().find(c => c.patente === patente);",
+                  "    pm.expect(camion, 'el camión debería seguir existiendo').to.not.be.undefined;",
+                  "    pm.expect(camion.activo).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "No se puede dar de baja dos veces",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones/{{camionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones", "{{camionId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 409 Conflict', () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.test('Avisa que ya estaba dado de baja', () => {",
+                  "    pm.expect(pm.response.json().detail).to.include('ya está dado de baja');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reactivar el camión",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/camiones/{{camionId}}/reactivar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "camiones", "{{camionId}}", "reactivar"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Vuelve a estar activo', () => {",
+                  "    pm.expect(pm.response.json().activo).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
