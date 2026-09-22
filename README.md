@@ -170,10 +170,27 @@ src/main/java/um/edu/ar/omnitrucks/
 
 La patente acepta los dos formatos argentinos (`ABC123` y `AB123CD`) y se normaliza a mayúsculas sin espacios antes de guardarla.
 
+### Viajes
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/viajes` | Lista los viajes, del más nuevo al más viejo. Con `?estado=EN_CURSO` filtra por estado. |
+| `GET` | `/api/viajes/activos` | Viajes en la ruta ahora mismo (`EN_CURSO` o `PAUSADO`). Es el endpoint que consume el mapa. |
+| `GET` | `/api/viajes/{id}` | Trae un viaje con su camión y su chofer. |
+| `POST` | `/api/viajes` | Crea un viaje en estado `PROGRAMADO`. |
+| `POST` | `/api/viajes/{id}/iniciar` | `PROGRAMADO` → `EN_CURSO`. Registra la salida real. |
+| `POST` | `/api/viajes/{id}/pausar` | `EN_CURSO` → `PAUSADO`. |
+| `POST` | `/api/viajes/{id}/reanudar` | `PAUSADO` → `EN_CURSO`. |
+| `POST` | `/api/viajes/{id}/finalizar` | `EN_CURSO` o `PAUSADO` → `FINALIZADO`. Registra la llegada real. |
+| `POST` | `/api/viajes/{id}/cancelar` | Cualquier estado no final → `CANCELADO`. |
+
+Toda transición inválida devuelve `409` explicando por qué. Un camión no puede tener dos viajes en la ruta a la vez: lo valida el servicio y además lo garantiza un índice único parcial en la base.
+
 ---
 
 ## Convenciones del proyecto
 
+- **Se trabaja con TDD.** Para cada funcionalidad: primero el test, verlo fallar, después la implementación mínima que lo pone en verde, y recién ahí refactorizar. Los tests se nombran describiendo la regla de negocio (`noPermiteDarDeBajaDosVeces`), no el método que ejercitan.
 - **El esquema lo maneja Flyway**, no Hibernate. `ddl-auto` está en `validate`: si una entidad no coincide con la base, la aplicación no arranca. Todo cambio de esquema es una migración nueva en `src/main/resources/db/migration`.
 - **Los DTOs nunca son entidades.** Los controladores reciben y devuelven `record`s dedicados. Exponer entidades JPA filtra campos sensibles y provoca errores de serialización con las relaciones lazy.
 - **Las fechas son `Instant` y se guardan en `timestamptz`** (UTC). Nunca `LocalDateTime` para un instante en el tiempo.
@@ -191,7 +208,7 @@ El proyecto se construye por etapas, cada una verificable de forma independiente
 - [x] Etapa 0 — Docker Compose y preparación del entorno
 - [x] Etapa 1 — Cimientos: perfiles, Flyway, Actuator, manejo de errores
 - [x] Etapa 2 — CRUD de camiones
-- [ ] Etapa 3 — Viajes y máquina de estados
+- [x] Etapa 3 — Viajes y máquina de estados
 - [ ] Etapa 4 — Ingesta y consulta de posiciones
 - [ ] Etapa 5 — Simulador de recorridos
 
