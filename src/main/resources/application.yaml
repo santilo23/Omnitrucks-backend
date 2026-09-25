@@ -20,6 +20,13 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  jackson:
+    deserialization:
+      # Permite mandar un objeto suelto donde se espera una lista. Lo usa el
+      # alta de posiciones: el chofer reporta de a una mientras hay señal, y
+      # descarga un lote acumulado cuando la recupera. Un solo endpoint para
+      # los dos casos.
+      accept-single-value-as-array: true
 
 server:
   port: 8080

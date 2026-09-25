@@ -192,6 +192,21 @@ La patente acepta los dos formatos argentinos (`ABC123` y `AB123CD`) y se normal
 
 Toda transición inválida devuelve `409` explicando por qué. Un camión no puede tener dos viajes en la ruta a la vez: lo valida el servicio y además lo garantiza un índice único parcial en la base.
 
+### Posiciones
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `POST` | `/api/viajes/{id}/posiciones` | Registra posiciones en un viaje en ruta. Acepta un objeto suelto o un arreglo. |
+| `GET` | `/api/viajes/{id}/posiciones/ultima` | Última posición conocida. `404` si el viaje todavía no reportó ninguna. |
+| `GET` | `/api/viajes/{id}/recorrido` | Recorrido en orden cronológico, para dibujar la traza. Admite `desde`, `hasta` y `limite` (por defecto 1000 puntos). |
+| `GET` | `/api/viajes/activos/posiciones` | Dónde está cada camión en ruta, en un solo pedido. Es lo que alimenta el mapa. |
+
+Sobre el alta de posiciones:
+
+- **Acepta lotes** porque en la ruta se corta la señal. La app encola lo que no pudo enviar y lo descarga junto cuando vuelve la conexión, en un solo pedido.
+- **`registradoEn` es opcional.** Si no viene, se usa la hora del servidor. Cada posición guarda además `recibidoEn`, así se puede distinguir cuándo fue tomada de cuándo llegó.
+- Solo se aceptan en viajes `EN_CURSO` o `PAUSADO`. Un viaje pausado sigue recibiendo posiciones: el camión está detenido, pero sigue en la ruta.
+
 ---
 
 ## Convenciones del proyecto
@@ -215,7 +230,7 @@ El proyecto se construye por etapas, cada una verificable de forma independiente
 - [x] Etapa 1 — Cimientos: perfiles, Flyway, Actuator, manejo de errores
 - [x] Etapa 2 — CRUD de camiones
 - [x] Etapa 3 — Viajes y máquina de estados
-- [ ] Etapa 4 — Ingesta y consulta de posiciones
+- [x] Etapa 4 — Ingesta y consulta de posiciones
 - [ ] Etapa 5 — Simulador de recorridos
 
 **Fase 2 — App móvil**
