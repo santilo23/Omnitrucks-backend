@@ -1,7 +1,10 @@
-# Base de datos para desarrollo local.
+# Base de datos para desarrollo, como alternativa a instalar PostgreSQL.
 #
-# Se expone en el puerto 5433 (y no en el 5432 por defecto) para no chocar
-# con una instalación local de PostgreSQL que ya esté usando ese puerto.
+# El proyecto usa por defecto el PostgreSQL instalado en la máquina (puerto
+# 5432). Este contenedor se expone en el 5433 para que ambos convivan, y para
+# usarlo hay que arrancar la aplicación con:
+#
+#   DB_URL=jdbc:postgresql://localhost:5433/omnitrucks
 #
 # Levantar:  docker compose up -d
 # Apagar:    docker compose down

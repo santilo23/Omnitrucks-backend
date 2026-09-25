@@ -51,15 +51,21 @@ Según el rol del usuario, la vista cambia:
 
 > Todos los comandos se ejecutan desde la raíz del repositorio.
 
-**1. Levantar la base de datos**
+**1. Preparar la base de datos**
 
-```bash
-docker compose up -d
-```
+El proyecto usa por defecto un **PostgreSQL instalado en la máquina**, en `localhost:5432`, con la base y el usuario `omnitrucks`. Es el que se ve en pgAdmin.
 
-Esto arranca PostgreSQL 17 en `localhost:5433` con la base `omnitrucks` (usuario y contraseña `omnitrucks`). Los datos persisten en un volumen de Docker entre reinicios.
+La primera vez hay que crear la base. En pgAdmin, ejecutar [`scripts/crear-base-local.sql`](scripts/crear-base-local.sql), que tiene las instrucciones adentro: son dos bloques, uno conectado a la base `postgres` y otro a la base `omnitrucks` recién creada.
 
-> Se usa el puerto **5433** y no el 5432 por defecto para no chocar con un PostgreSQL instalado localmente. Si preferís usar otra base, sobreescribí `DB_URL`, `DB_USERNAME` y `DB_PASSWORD` con variables de entorno.
+Las tablas no se crean a mano: las aplica Flyway al arrancar la aplicación.
+
+> **Alternativa con Docker.** Si preferís no instalar PostgreSQL, `docker compose up -d` levanta uno en el puerto **5433** (el 5433 y no el 5432 para que convivan). En ese caso hay que indicar la URL por variable de entorno antes de arrancar. En PowerShell:
+>
+> ```bash
+> $env:DB_URL="jdbc:postgresql://localhost:5433/omnitrucks"; .\mvnw.cmd spring-boot:run
+> ```
+>
+> Los tres valores de conexión (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`) se pueden sobreescribir así.
 
 **2. Arrancar la aplicación**
 
