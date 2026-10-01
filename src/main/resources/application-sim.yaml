@@ -1,0 +1,10 @@
+# Configuración del perfil de simulación ('sim').
+omnitrucks:
+  simulacion:
+    # Frecuencia con la que el simulador recalcula y guarda nuevas posiciones
+    intervalo-ms: 5000
+    intervalo-segundos: 5
+    # Velocidad promedio del camión en ruta simulada
+    velocidad-kmh: 80.0
+    # Distancia en metros a partir de la cual se considera alcanzado el destino final
+    umbral-llegada-metros: 100.0

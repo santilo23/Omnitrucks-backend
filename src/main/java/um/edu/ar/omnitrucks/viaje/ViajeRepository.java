@@ -19,6 +19,9 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
 	List<Viaje> findAllByEstadoOrderByCreatedAtDesc(EstadoViaje estado);
 
 	@EntityGraph(attributePaths = { "camion", "chofer" })
+	List<Viaje> findAllByEstado(EstadoViaje estado);
+
+	@EntityGraph(attributePaths = { "camion", "chofer" })
 	List<Viaje> findAllByEstadoInOrderByCreatedAtDesc(Collection<EstadoViaje> estados);
 
 	boolean existsByCamionIdAndEstadoIn(Long camionId, Collection<EstadoViaje> estados);

@@ -231,7 +231,7 @@ El proyecto se construye por etapas, cada una verificable de forma independiente
 - [x] Etapa 2 — CRUD de camiones
 - [x] Etapa 3 — Viajes y máquina de estados
 - [x] Etapa 4 — Ingesta y consulta de posiciones
-- [ ] Etapa 5 — Simulador de recorridos
+- [x] Etapa 5 — Simulador de recorridos
 
 **Fase 2 — App móvil**
 
