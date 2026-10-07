@@ -1,5 +1,6 @@
 package um.edu.ar.omnitrucks.posicion;
 
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,10 +12,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
 import um.edu.ar.omnitrucks.camion.Camion;
 import um.edu.ar.omnitrucks.camion.CamionRepository;
@@ -32,15 +35,17 @@ import um.edu.ar.omnitrucks.viaje.ViajeRepository;
  * más adelante, la app del chofer reportando su ubicación real.
  */
 @SpringBootTest
-@AutoConfigureMockMvc
 @Transactional
+@WithMockUser
 class PosicionControllerTest {
 
 	/** Hora fija de referencia, para no depender del reloj al ordenar. */
 	private static final Instant T0 = Instant.parse("2026-09-25T12:00:00Z");
 
-	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private WebApplicationContext context;
 
 	@Autowired
 	private CamionRepository camiones;
@@ -60,6 +65,7 @@ class PosicionControllerTest {
 
 	@BeforeEach
 	void prepararDatos() {
+		mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 		posiciones.deleteAllInBatch();
 		viajes.deleteAllInBatch();
 		camiones.deleteAllInBatch();

@@ -1,6 +1,7 @@
 package um.edu.ar.omnitrucks.camion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,10 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
 
 import um.edu.ar.omnitrucks.viaje.ViajeRepository;
 
@@ -28,12 +31,14 @@ import um.edu.ar.omnitrucks.viaje.ViajeRepository;
  * que no se pisan entre sí ni ensucian la base.
  */
 @SpringBootTest
-@AutoConfigureMockMvc
 @Transactional
+@WithMockUser(roles = "ADMIN")
 class CamionControllerTest {
 
-	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private WebApplicationContext context;
 
 	@Autowired
 	private CamionRepository repositorio;
@@ -47,6 +52,7 @@ class CamionControllerTest {
 
 	@BeforeEach
 	void limpiar() {
+		mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
 		viajes.deleteAllInBatch();
 		repositorio.deleteAll();
 	}
@@ -160,6 +166,13 @@ class CamionControllerTest {
 			.andExpect(jsonPath("$.length()").value(2))
 			.andExpect(jsonPath("$[0].patente").value("AA111AA"))
 			.andExpect(jsonPath("$[1].patente").value("ZZ999ZZ"));
+	}
+
+	@Test
+	@WithMockUser(roles = "CHOFER")
+	void unUsuarioSinRolAdminNoPuedeAccederACamiones() throws Exception {
+		mockMvc.perform(get("/api/camiones"))
+			.andExpect(status().isForbidden());
 	}
 
 	private Long crearScania() throws Exception {

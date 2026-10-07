@@ -43,6 +43,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return problema;
 	}
 
+	@ExceptionHandler(CredencialesInvalidasException.class)
+	ProblemDetail manejarCredencialesInvalidas(CredencialesInvalidasException ex) {
+		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+		problema.setTitle("Credenciales inválidas");
+		return problema;
+	}
+
+	@ExceptionHandler(CuentaInactivaException.class)
+	ProblemDetail manejarCuentaInactiva(CuentaInactivaException ex) {
+		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+		problema.setTitle("Cuenta inactiva");
+		return problema;
+	}
+
 	/**
 	 * Errores de Bean Validation en el cuerpo de la request. Además del mensaje
 	 * general, agrega un mapa {@code errores} campo → mensaje para que la app
