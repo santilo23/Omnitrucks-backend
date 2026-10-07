@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import um.edu.ar.omnitrucks.viaje.ViajeRepository;
+
 /**
  * Recorre la pila completa —controlador, servicio, JPA y PostgreSQL— contra la
  * base levantada con docker compose.
@@ -36,12 +38,16 @@ class CamionControllerTest {
 	@Autowired
 	private CamionRepository repositorio;
 
+	@Autowired
+	private ViajeRepository viajes;
+
 	private static final String SCANIA = """
 		{"patente": "AB123CD", "marca": "Scania", "modelo": "R450", "anio": 2020, "capacidadKg": 30000}
 		""";
 
 	@BeforeEach
 	void limpiar() {
+		viajes.deleteAllInBatch();
 		repositorio.deleteAll();
 	}
 
