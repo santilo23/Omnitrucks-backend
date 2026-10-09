@@ -36,3 +36,10 @@ management:
     web:
       exposure:
         include: health,info
+
+omnitrucks:
+  seed:
+    admin-password: ${SEED_ADMIN_PASSWORD:}
+    chofer-password: ${SEED_CHOFER_PASSWORD:}
+    cliente-password: ${SEED_CLIENTE_PASSWORD:}
+

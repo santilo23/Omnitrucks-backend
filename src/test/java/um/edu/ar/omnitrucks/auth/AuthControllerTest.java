@@ -122,4 +122,64 @@ class AuthControllerTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.title").value("Datos inválidos"));
 	}
+
+	@Test
+	@DisplayName("POST /api/auth/login con cuenta inactiva devuelve 403 Forbidden")
+	void loginCuentaInactiva() throws Exception {
+		Usuario inactivo = new Usuario();
+		inactivo.setEmail("inactivo@omnitrucks.com");
+		inactivo.setPasswordHash(passwordEncoder.encode("secreto123"));
+		inactivo.setNombre("Pedro");
+		inactivo.setApellido("Picapiedra");
+		inactivo.setRol(Rol.CHOFER);
+		inactivo.setActivo(false);
+		usuarioRepository.save(inactivo);
+
+		String body = """
+			{
+				"email": "inactivo@omnitrucks.com",
+				"password": "secreto123"
+			}
+			""";
+
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.title").value("Cuenta inactiva"));
+	}
+
+	@Test
+	@DisplayName("POST /api/auth/login para rol CLIENTE devuelve DTO record con rol CLIENTE")
+	void loginClienteExitoso() throws Exception {
+		Usuario cliente = new Usuario();
+		cliente.setEmail("empresa@cliente.com");
+		cliente.setPasswordHash(passwordEncoder.encode("secreto123"));
+		cliente.setNombre("Distribuidora");
+		cliente.setApellido("Sur");
+		cliente.setRol(Rol.CLIENTE);
+		cliente.setActivo(true);
+		usuarioRepository.save(cliente);
+
+		String body = """
+			{
+				"email": "empresa@cliente.com",
+				"password": "secreto123"
+			}
+			""";
+
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.rol").value("CLIENTE"))
+			.andExpect(jsonPath("$.token").isString());
+	}
+
+	@Test
+	@DisplayName("GET /api/viajes/activos sin autenticación es rechazado (Login obligatorio para mapa)")
+	void accesoAlMapaSinAutenticacionEsRechazado() throws Exception {
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/viajes/activos"))
+			.andExpect(status().isForbidden());
+	}
 }

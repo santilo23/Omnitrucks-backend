@@ -47,12 +47,9 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				// Endpoints públicos de autenticación, monitoreo y errores
 				.requestMatchers("/api/auth/**", "/actuator/**", "/error").permitAll()
-				// Consulta de posiciones activas y recorridos para el mapa
-				.requestMatchers(HttpMethod.GET, "/api/viajes/activos/**").permitAll()
-				.requestMatchers(HttpMethod.GET, "/api/viajes/*/recorrido").permitAll()
 				// Gestión de camiones restringida a Administradores
 				.requestMatchers("/api/camiones/**").hasRole("ADMIN")
-				// Resto de endpoints requieren autenticación
+				// Resto de endpoints (incluyendo mapa, posiciones y viajes) requieren autenticación obligatoria
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
