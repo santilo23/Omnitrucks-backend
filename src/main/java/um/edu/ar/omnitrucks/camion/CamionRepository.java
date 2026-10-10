@@ -13,6 +13,11 @@ public interface CamionRepository extends JpaRepository<Camion, Long> {
 
 	List<Camion> findAllByActivoTrueOrderByPatenteAsc();
 
+	List<Camion> findAllByActivoFalseOrderByPatenteAsc();
+
 	List<Camion> findAllByOrderByPatenteAsc();
 
+	long countByActivoTrue();
+
+	long countByActivoFalse();
 }

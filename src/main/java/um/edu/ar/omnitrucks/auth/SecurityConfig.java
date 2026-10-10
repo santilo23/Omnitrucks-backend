@@ -47,8 +47,8 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				// Endpoints públicos de autenticación, monitoreo y errores
 				.requestMatchers("/api/auth/**", "/actuator/**", "/error").permitAll()
-				// Gestión de camiones restringida a Administradores
-				.requestMatchers("/api/camiones/**").hasRole("ADMIN")
+				// Gestión de camiones y panel de administración restringida a Administradores
+				.requestMatchers("/api/admin/**", "/api/camiones/**").hasRole("ADMIN")
 				// Resto de endpoints (incluyendo mapa, posiciones y viajes) requieren autenticación obligatoria
 				.anyRequest().authenticated()
 			)

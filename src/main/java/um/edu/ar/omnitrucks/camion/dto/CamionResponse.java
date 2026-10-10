@@ -3,12 +3,10 @@ package um.edu.ar.omnitrucks.camion.dto;
 import java.time.Instant;
 
 import um.edu.ar.omnitrucks.camion.Camion;
+import um.edu.ar.omnitrucks.camion.domain.model.EstadoOperativoCamion;
 
 /**
- * Representación de un camión hacia afuera de la API.
- *
- * Se devuelve este record y nunca la entidad: exponer entidades JPA filtra
- * campos que no corresponden y dispara consultas lazy al serializar.
+ * Representación de un camión hacia afuera de la API con su estado operativo.
  */
 public record CamionResponse(
 	Long id,
@@ -18,10 +16,11 @@ public record CamionResponse(
 	Integer anio,
 	Integer capacidadKg,
 	boolean activo,
+	EstadoOperativoCamion estadoOperativo,
 	Instant createdAt
 ) {
 
-	public static CamionResponse desde(Camion camion) {
+	public static CamionResponse desde(Camion camion, EstadoOperativoCamion estadoOperativo) {
 		return new CamionResponse(
 			camion.getId(),
 			camion.getPatente(),
@@ -30,7 +29,15 @@ public record CamionResponse(
 			camion.getAnio(),
 			camion.getCapacidadKg(),
 			camion.isActivo(),
+			estadoOperativo,
 			camion.getCreatedAt()
+		);
+	}
+
+	public static CamionResponse desde(Camion camion) {
+		return desde(
+			camion,
+			camion.isActivo() ? EstadoOperativoCamion.DISPONIBLE : EstadoOperativoCamion.INACTIVO
 		);
 	}
 
