@@ -36,7 +36,7 @@ import um.edu.ar.omnitrucks.viaje.ViajeRepository;
  */
 @SpringBootTest
 @Transactional
-@WithMockUser
+@WithMockUser(roles = "ADMIN")
 class PosicionControllerTest {
 
 	/** Hora fija de referencia, para no depender del reloj al ordenar. */

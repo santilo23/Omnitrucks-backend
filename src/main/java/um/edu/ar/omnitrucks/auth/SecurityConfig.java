@@ -53,7 +53,11 @@ public class SecurityConfig {
 				.requestMatchers("/api/cliente/**").hasAnyRole("CLIENTE", "ADMIN")
 				// Portal y mapa de ruta exclusivo para Choferes (supervisable por Administradores)
 				.requestMatchers("/api/chofer/**").hasAnyRole("CHOFER", "ADMIN")
-				// Resto de endpoints (incluyendo mapa, posiciones y viajes) requieren autenticación obligatoria
+				// Ingesta de posiciones GPS en ruta (permitido a Chofer y Administrador/Simulador)
+				.requestMatchers(HttpMethod.POST, "/api/viajes/*/posiciones").hasAnyRole("CHOFER", "ADMIN")
+				// Mapa global de flota y administración operativa de viajes exclusivo para Administradores
+				.requestMatchers("/api/viajes/**").hasRole("ADMIN")
+				// Resto de endpoints requieren autenticación obligatoria
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

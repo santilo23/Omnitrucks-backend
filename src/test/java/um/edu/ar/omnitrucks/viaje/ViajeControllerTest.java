@@ -33,7 +33,7 @@ import um.edu.ar.omnitrucks.usuario.UsuarioRepository;
  */
 @SpringBootTest
 @Transactional
-@WithMockUser
+@WithMockUser(roles = "ADMIN")
 class ViajeControllerTest {
 
 	private MockMvc mockMvc;
