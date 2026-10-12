@@ -10,7 +10,7 @@ on:
 env:
   IMAGE_NAME: "omnitrucks-backend"
   ACR_NAME: "omnitruckssantiacr"
-  AZURE_WEBAPP_NAME: "omnitruck-api-santi"
+  AZURE_WEBAPP_NAME: "omnitrucks-api-santi"
   RESOURCE_GROUP: "rg-omnitrucks"
 
 jobs:
