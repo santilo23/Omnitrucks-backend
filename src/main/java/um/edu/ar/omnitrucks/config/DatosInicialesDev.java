@@ -32,7 +32,7 @@ import um.edu.ar.omnitrucks.viaje.ViajeRepository;
  * Si no se configuran, se generan contraseñas aleatorias seguras temporales.
  */
 @Component
-@Profile("dev")
+@Profile({"dev", "prod"})
 public class DatosInicialesDev implements CommandLineRunner {
 
 	private static final Logger log = LoggerFactory.getLogger(DatosInicialesDev.class);

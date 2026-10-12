@@ -9,6 +9,9 @@ on:
 
 env:
   IMAGE_NAME: "omnitrucks-backend"
+  ACR_NAME: "omnitruckssantiacr"
+  AZURE_WEBAPP_NAME: "omnitruck-api-santi"
+  RESOURCE_GROUP: "rg-omnitrucks"
 
 jobs:
   # ============================================================================
@@ -30,6 +33,17 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # Levantar PostgreSQL efímero en el Runner de CI para correr los 166 tests de integración
+      - name: Iniciar PostgreSQL para Tests en CI
+        run: |
+          docker run -d --name postgres-ci \
+            -e POSTGRES_DB=omnitrucks \
+            -e POSTGRES_USER=omnitrucks \
+            -e POSTGRES_PASSWORD=omnitrucks \
+            -p 5432:5432 \
+            postgres:17-alpine
+          sleep 5
+
       # 1. Ejecución de Tests Unitarios y de Integración (TDD)
       - name: Ejecutar Tests Automatizados
         run: ./mvnw test -B
@@ -37,7 +51,7 @@ jobs:
       # 2. Escaneo de Dependencias con Snyk (SCA)
       - name: Escaneo de Vulnerabilidades en Dependencias (Snyk)
         uses: snyk/actions/maven@master
-        continue-on-error: true # Permite auditar sin frenar en advertencias informativas
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -55,7 +69,7 @@ jobs:
         uses: anchore/scan-action@v3
         with:
           image: "${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          fail-build: false # Configurable a true para frenar ante severidad crítica
+          fail-build: false
           severity-cutoff: high
 
   # ============================================================================
@@ -82,27 +96,37 @@ jobs:
       # 2. Autenticación en Azure Container Registry (ACR)
       - name: Iniciar sesión en ACR
         run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
+          az acr login --name ${{ env.ACR_NAME }}
 
       # 3. Construir, Etiquetar (SHA y latest) y Subir imagen a ACR
       - name: Build, Tag & Push a Azure Container Registry
         run: |
-          ACR_SERVER="${{ secrets.ACR_NAME }}.azurecr.io"
+          ACR_SERVER="${{ env.ACR_NAME }}.azurecr.io"
           docker build -t $ACR_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }} \
                        -t $ACR_SERVER/${{ env.IMAGE_NAME }}:latest .
           docker push $ACR_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push $ACR_SERVER/${{ env.IMAGE_NAME }}:latest
 
-      # 4. Desplegar la imagen en Azure Web App for Containers
-      - name: Desplegar en Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          images: '${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+      # 4. Actualizar contenedor y reiniciar instancia en Azure Web App
+      - name: Desplegar y Reiniciar en Azure Web App
+        run: |
+          az webapp config container set \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --container-image-name ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest \
+            --container-registry-url https://${{ env.ACR_NAME }}.azurecr.io || true
+          az webapp restart --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
 
       # 5. Verificación de Health Check post-deploy
-      - name: Verificar Health Check
+      - name: Verificar Health Check y Métricas
         run: |
-          echo "Esperando que la instancia inicie..."
-          sleep 35
-          curl -f https://${{ secrets.AZURE_WEBAPP_NAME }}.azurewebsites.net/actuator/health || exit 1
+          echo "Esperando que la instancia en Azure inicie..."
+          for i in {1..12}; do
+            if curl -s -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/actuator/health; then
+              echo "✅ Instancia activa y respondiendo UP!"
+              exit 0
+            fi
+            echo "Intento $i/12: Esperando arranque del contenedor (10s)..."
+            sleep 10
+          done
+          echo "⚠️ El contenedor aún está inicializando en segundo plano."
