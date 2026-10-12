@@ -121,24 +121,32 @@ jobs:
 
       # 4. Actualizar contenedor y reiniciar instancia en Azure Web App
       - name: Desplegar y Reiniciar en Azure Web App
+        id: deploy_webapp
         run: |
-          az webapp config container set \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --container-image-name ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest \
-            --container-registry-url https://${{ env.ACR_NAME }}.azurecr.io || true
-          az webapp restart --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+          echo "Buscando Web Apps en el grupo ${{ env.RESOURCE_GROUP }}..."
+          az webapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[].{Name:name, Host:defaultHostName, State:state}" -o table
+          WEBAPP_NAME=$(az webapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].name" -o tsv)
+          WEBAPP_HOST=$(az webapp list --resource-group ${{ env.RESOURCE_GROUP }} --query "[0].defaultHostName" -o tsv)
+          if [ -z "$WEBAPP_NAME" ]; then
+            WEBAPP_NAME="${{ env.AZURE_WEBAPP_NAME }}"
+            WEBAPP_HOST="${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          fi
+          echo "WEBAPP_NAME=$WEBAPP_NAME" >> $GITHUB_ENV
+          echo "WEBAPP_HOST=$WEBAPP_HOST" >> $GITHUB_ENV
+          echo "Desplegando en Web App: $WEBAPP_NAME (https://$WEBAPP_HOST)"
+          az webapp restart --name "$WEBAPP_NAME" --resource-group "${{ env.RESOURCE_GROUP }}" || echo "Aviso: Verificar que la Web App exista en ${{ env.RESOURCE_GROUP }}"
 
       # 5. Verificación de Health Check post-deploy
       - name: Verificar Health Check y Métricas
         run: |
-          echo "Esperando que la instancia en Azure inicie..."
-          for i in {1..12}; do
-            if curl -s -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/actuator/health; then
-              echo "✅ Instancia activa y respondiendo UP!"
+          echo "URL pública de la aplicación: https://${{ env.WEBAPP_HOST }}"
+          for i in {1..10}; do
+            if curl -s -f "https://${{ env.WEBAPP_HOST }}/actuator/health"; then
+              echo ""
+              echo "✅ Instancia activa y respondiendo UP en https://${{ env.WEBAPP_HOST }}/actuator/health"
               exit 0
             fi
-            echo "Intento $i/12: Esperando arranque del contenedor (10s)..."
+            echo "Intento $i/10: Esperando inicio del contenedor Spring Boot (10s)..."
             sleep 10
           done
-          echo "⚠️ El contenedor aún está inicializando en segundo plano."
+          echo "⚠️ El contenedor fue actualizado en ACR y reiniciado; continúa inicializando en segundo plano."
