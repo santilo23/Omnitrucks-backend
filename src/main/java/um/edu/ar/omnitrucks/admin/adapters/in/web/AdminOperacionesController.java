@@ -5,6 +5,7 @@ import java.util.List;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,6 +46,17 @@ public class AdminOperacionesController {
 		return operacionesUseCase.listarChoferes();
 	}
 
+	@PostMapping("/clientes")
+	@ResponseStatus(HttpStatus.CREATED)
+	public UsuarioResponse crearCliente(@Valid @RequestBody um.edu.ar.omnitrucks.admin.application.dto.CrearClienteRequest request) {
+		return operacionesUseCase.crearCliente(request);
+	}
+
+	@GetMapping("/clientes")
+	public List<UsuarioResponse> listarClientes() {
+		return operacionesUseCase.listarClientes();
+	}
+
 	@PostMapping("/viajes")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ViajeMonitoreoAdminResponse asignarViaje(@Valid @RequestBody AsignarViajeAdminRequest request) {
@@ -60,6 +72,12 @@ public class AdminOperacionesController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public ViajeMonitoreoAdminResponse generarViajeSimuladoDemo() {
 		return operacionesUseCase.generarViajeSimuladoDemo();
+	}
+
+	@PostMapping("/viajes/{id}/finalizar")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void finalizarViaje(@PathVariable Long id) {
+		operacionesUseCase.finalizarViaje(id);
 	}
 
 }

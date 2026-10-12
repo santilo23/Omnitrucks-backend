@@ -16,6 +16,7 @@ public record UsuarioResponse(
 	String nombreCompleto,
 	Rol rol,
 	boolean activo,
+	boolean debeCambiarPassword,
 	Instant createdAt
 ) {
 
@@ -28,6 +29,7 @@ public record UsuarioResponse(
 			usuario.getNombreCompleto(),
 			usuario.getRol(),
 			usuario.isActivo(),
+			usuario.isDebeCambiarPassword(),
 			usuario.getCreatedAt()
 		);
 	}

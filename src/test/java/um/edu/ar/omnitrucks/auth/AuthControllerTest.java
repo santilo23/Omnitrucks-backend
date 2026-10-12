@@ -13,19 +13,24 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.WebApplicationContext;
+
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import um.edu.ar.omnitrucks.usuario.Rol;
 import um.edu.ar.omnitrucks.usuario.Usuario;
 import um.edu.ar.omnitrucks.usuario.UsuarioRepository;
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @Transactional
 class AuthControllerTest {
 
-	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private WebApplicationContext context;
 
 	@Autowired
 	private UsuarioRepository usuarioRepository;
@@ -38,6 +43,8 @@ class AuthControllerTest {
 
 	@BeforeEach
 	void prepararUsuario() {
+		mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+
 		viajes.deleteAllInBatch();
 		usuarioRepository.deleteAllInBatch();
 
@@ -181,5 +188,60 @@ class AuthControllerTest {
 	void accesoAlMapaSinAutenticacionEsRechazado() throws Exception {
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/viajes/activos"))
 			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@DisplayName("POST /api/auth/cambiar-password actualiza la clave y desactiva debeCambiarPassword")
+	@org.springframework.security.test.context.support.WithMockUser(username = "chofer.test@omnitrucks.com")
+	void cambiarPasswordExitoso() throws Exception {
+		String body = """
+			{
+				"passwordActual": "secreto123",
+				"nuevaPassword": "nuevaClaveSegura456"
+			}
+			""";
+
+		mockMvc.perform(post("/api/auth/cambiar-password")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isOk());
+
+		Usuario actualizado = usuarioRepository.findByEmail("chofer.test@omnitrucks.com").orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(passwordEncoder.matches("nuevaClaveSegura456", actualizado.getPasswordHash())).isTrue();
+		org.assertj.core.api.Assertions.assertThat(actualizado.isDebeCambiarPassword()).isFalse();
+	}
+
+	@Test
+	@DisplayName("POST /api/auth/cambiar-password con clave actual errónea devuelve 401 Unauthorized")
+	@org.springframework.security.test.context.support.WithMockUser(username = "chofer.test@omnitrucks.com")
+	void cambiarPasswordClaveActualErronea() throws Exception {
+		String body = """
+			{
+				"passwordActual": "claveIncorrecta",
+				"nuevaPassword": "nuevaClaveSegura456"
+			}
+			""";
+
+		mockMvc.perform(post("/api/auth/cambiar-password")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	@DisplayName("POST /api/auth/cambiar-password con campos inválidos devuelve 400 Bad Request")
+	@org.springframework.security.test.context.support.WithMockUser(username = "chofer.test@omnitrucks.com")
+	void cambiarPasswordCamposInvalidos() throws Exception {
+		String body = """
+			{
+				"passwordActual": "",
+				"nuevaPassword": "123"
+			}
+			""";
+
+		mockMvc.perform(post("/api/auth/cambiar-password")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isBadRequest());
 	}
 }

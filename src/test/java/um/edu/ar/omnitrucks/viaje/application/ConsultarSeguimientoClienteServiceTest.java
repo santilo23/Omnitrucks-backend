@@ -142,6 +142,21 @@ class ConsultarSeguimientoClienteServiceTest {
 	}
 
 	@Test
+	@DisplayName("consultarPorCodigo cuando el viaje no tiene cliente previo asocia automáticamente el viaje al cliente")
+	void consultarPorCodigo_sinClientePrevio_vinculaAutomaticamenteAlCliente() {
+		viajeClienteA.setCliente(null);
+		when(usuarioRepository.findByEmail(clienteA.getEmail())).thenReturn(Optional.of(clienteA));
+		when(viajeSeguimientoRepository.buscarPorCodigoSeguimiento("TRK-ALFA001")).thenReturn(Optional.of(viajeClienteA));
+		when(viajeSeguimientoRepository.buscarUltimaPosicion(500L)).thenReturn(Optional.of(posicionActual));
+
+		SeguimientoClienteResponse respuesta = service.consultarPorCodigo("TRK-ALFA001", clienteA.getEmail());
+
+		assertThat(respuesta).isNotNull();
+		assertThat(respuesta.codigoSeguimiento()).isEqualTo("TRK-ALFA001");
+		assertThat(viajeClienteA.getCliente()).isEqualTo(clienteA);
+	}
+
+	@Test
 	@DisplayName("consultarPorCodigo desde un cliente distinto lanza AccesoDenegadoException")
 	void consultarPorCodigo_clienteDiferente_lanzaAccesoDenegadoException() {
 		when(usuarioRepository.findByEmail(clienteB.getEmail())).thenReturn(Optional.of(clienteB));

@@ -45,6 +45,8 @@ public class SecurityConfig {
 			.cors(Customizer.withDefaults())
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
+				// Actualización obligatoria o voluntaria de contraseña requiere sesión autenticada
+				.requestMatchers("/api/auth/cambiar-password").authenticated()
 				// Endpoints públicos de autenticación, monitoreo y errores
 				.requestMatchers("/api/auth/**", "/actuator/**", "/error").permitAll()
 				// Gestión de camiones y panel de administración restringida a Administradores

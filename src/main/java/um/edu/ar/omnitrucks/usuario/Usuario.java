@@ -50,6 +50,9 @@ public class Usuario {
 	@Column(nullable = false)
 	private boolean activo = true;
 
+	@Column(name = "debe_cambiar_password", nullable = false)
+	private boolean debeCambiarPassword = false;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 

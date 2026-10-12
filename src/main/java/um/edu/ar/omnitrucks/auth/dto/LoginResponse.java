@@ -9,7 +9,8 @@ public record LoginResponse(
 	Long usuarioId,
 	String email,
 	String nombreCompleto,
-	Rol rol
+	Rol rol,
+	boolean debeCambiarPassword
 ) {
 	public static LoginResponse de(String token, Usuario usuario) {
 		return new LoginResponse(
@@ -18,7 +19,8 @@ public record LoginResponse(
 			usuario.getId(),
 			usuario.getEmail(),
 			usuario.getNombreCompleto(),
-			usuario.getRol()
+			usuario.getRol(),
+			usuario.isDebeCambiarPassword()
 		);
 	}
 }

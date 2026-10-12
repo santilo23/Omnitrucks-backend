@@ -128,6 +128,57 @@ class AdminOperacionesControllerTest {
 
 	@Test
 	@WithMockUser(roles = "ADMIN")
+	@DisplayName("Admin puede agregar un nuevo cliente con clave provisoria y flag debeCambiarPassword activado")
+	void adminPuedeCrearCliente() throws Exception {
+		String json = """
+			{
+				"nombre": "Ana",
+				"apellido": "López",
+				"email": "ana.lopez@cliente.com",
+				"passwordProvisoria": "provisoria123"
+			}
+			""";
+
+		mockMvc.perform(post("/api/admin/clientes")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.nombre", is("Ana")))
+			.andExpect(jsonPath("$.apellido", is("López")))
+			.andExpect(jsonPath("$.email", is("ana.lopez@cliente.com")))
+			.andExpect(jsonPath("$.rol", is("CLIENTE")))
+			.andExpect(jsonPath("$.debeCambiarPassword", is(true)))
+			.andExpect(jsonPath("$.password").doesNotExist());
+
+		Usuario guardado = usuarioRepository.findByEmail("ana.lopez@cliente.com").orElseThrow();
+		assertThat(guardado.getPasswordHash()).startsWith("$2a$");
+		assertThat(guardado.isDebeCambiarPassword()).isTrue();
+		assertThat(passwordEncoder.matches("provisoria123", guardado.getPasswordHash())).isTrue();
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	@DisplayName("Admin puede listar los clientes registrados en el sistema")
+	void adminPuedeListarClientes() throws Exception {
+		Usuario cliente = new Usuario();
+		cliente.setNombre("Pedro");
+		cliente.setApellido("Picapiedra");
+		cliente.setEmail("pedro@cliente.com");
+		cliente.setPasswordHash(passwordEncoder.encode("clave123"));
+		cliente.setRol(Rol.CLIENTE);
+		cliente.setActivo(true);
+		cliente.setDebeCambiarPassword(true);
+		usuarioRepository.save(cliente);
+
+		mockMvc.perform(get("/api/admin/clientes"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(1)))
+			.andExpect(jsonPath("$[0].email", is("pedro@cliente.com")))
+			.andExpect(jsonPath("$[0].debeCambiarPassword", is(true)));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
 	@DisplayName("Admin puede asignar viaje a un chofer e iniciar la simulación en ruta inmediatamente")
 	void adminPuedeAsignarViajeEIniciarSimulacion() throws Exception {
 		String json = """
@@ -186,6 +237,84 @@ class AdminOperacionesControllerTest {
 	}
 
 	@Test
+	@WithMockUser(roles = "ADMIN")
+	@DisplayName("No permite asignar un viaje a un chofer que ya tiene un viaje activo en curso")
+	void adminNoPuedeAsignarViajeAChoferOcupado() throws Exception {
+		adminPuedeAsignarViajeEIniciarSimulacion();
+
+		Camion camion2 = new Camion();
+		camion2.setPatente("AE111ZZ");
+		camion2.setMarca("Volvo");
+		camion2.setModelo("FH540");
+		camion2.setAnio(2024);
+		camion2.setCapacidadKg(30000);
+		camion2.setActivo(true);
+		camion2 = camionRepository.save(camion2);
+
+		String jsonSegundo = """
+			{
+				"camionId": %d,
+				"choferId": %d,
+				"origenNombre": "Rosario",
+				"origenLat": -32.95,
+				"origenLon": -60.65,
+				"destinoNombre": "Córdoba",
+				"destinoLat": -31.42,
+				"destinoLon": -64.18,
+				"descripcionCarga": "Granos",
+				"iniciarInmediatamente": true
+			}
+			""".formatted(camion2.getId(), chofer.getId());
+
+		mockMvc.perform(post("/api/admin/viajes")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonSegundo))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.detail", is("El chofer seleccionado ya tiene un viaje activo en curso.")));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	@DisplayName("Admin puede finalizar un viaje activo")
+	void adminPuedeFinalizarViajeActivo() throws Exception {
+		adminPuedeAsignarViajeEIniciarSimulacion();
+
+		String listadoResp = mockMvc.perform(get("/api/admin/viajes/activos"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(1)))
+			.andReturn().getResponse().getContentAsString();
+
+		Long viajeId = com.jayway.jsonpath.JsonPath.parse(listadoResp).read("$[0].viajeId", Integer.class).longValue();
+
+		mockMvc.perform(post("/api/admin/viajes/" + viajeId + "/finalizar"))
+			.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/admin/viajes/activos"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(0)));
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	@DisplayName("Generar múltiples viajes simulados asigna choferes y camiones únicos sin duplicar chofer en ruta")
+	void generarMultiplesDemosAsignaChoferesDistintos() throws Exception {
+		mockMvc.perform(post("/api/admin/simulacion/crear-demo"))
+			.andExpect(status().isCreated());
+
+		mockMvc.perform(post("/api/admin/simulacion/crear-demo"))
+			.andExpect(status().isCreated());
+
+		String activos = mockMvc.perform(get("/api/admin/viajes/activos"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$", hasSize(2)))
+			.andReturn().getResponse().getContentAsString();
+
+		String chofer1 = com.jayway.jsonpath.JsonPath.parse(activos).read("$[0].choferNombre", String.class);
+		String chofer2 = com.jayway.jsonpath.JsonPath.parse(activos).read("$[1].choferNombre", String.class);
+		assertThat(chofer1).isNotEqualTo(chofer2);
+	}
+
+	@Test
 	@WithMockUser(roles = "CHOFER")
 	@DisplayName("Un chofer NO tiene permiso para crear otros choferes ni asignar viajes de administración (403)")
 	void choferNoPuedeAccederOperacionesAdmin() throws Exception {
@@ -200,6 +329,14 @@ class AdminOperacionesControllerTest {
 		mockMvc.perform(post("/api/admin/viajes")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{}"))
+			.andExpect(status().isForbidden());
+
+		mockMvc.perform(post("/api/admin/clientes")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+			.andExpect(status().isForbidden());
+
+		mockMvc.perform(get("/api/admin/clientes"))
 			.andExpect(status().isForbidden());
 	}
 

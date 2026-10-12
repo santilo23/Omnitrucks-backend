@@ -103,6 +103,12 @@ public class ViajeService {
 				"El camión %s ya tiene un viaje en curso.".formatted(camion.getPatente()));
 		}
 
+		Usuario chofer = viaje.getChofer();
+		if (viajes.existsByChoferIdAndEstadoIn(chofer.getId(), EN_RUTA)) {
+			throw new ConflictoException(
+				"El chofer %s ya tiene un viaje en curso.".formatted(chofer.getNombreCompleto()));
+		}
+
 		viaje.setEstado(EstadoViaje.EN_CURSO);
 		viaje.setSalidaReal(Instant.now());
 		return ViajeResponse.desde(viaje);

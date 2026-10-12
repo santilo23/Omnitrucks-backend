@@ -91,7 +91,45 @@ public class GestionAdminOperacionesService implements GestionAdminOperacionesUs
 	}
 
 	@Override
+	public UsuarioResponse crearCliente(um.edu.ar.omnitrucks.admin.application.dto.CrearClienteRequest request) {
+		String email = request.email().trim().toLowerCase();
+		if (usuarioRepository.existsByEmail(email)) {
+			throw new ConflictoException("Ya existe un usuario registrado con el email " + email);
+		}
+
+		Usuario cliente = new Usuario();
+		cliente.setNombre(request.nombre().trim());
+		cliente.setApellido(request.apellido().trim());
+		cliente.setEmail(email);
+		cliente.setPasswordHash(passwordEncoder.encode(request.passwordProvisoria()));
+		cliente.setRol(Rol.CLIENTE);
+		cliente.setActivo(true);
+		cliente.setDebeCambiarPassword(true);
+
+		Usuario guardado = usuarioRepository.save(cliente);
+		return UsuarioResponse.de(guardado);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<UsuarioResponse> listarClientes() {
+		return usuarioRepository.findAllByRolAndActivoTrue(Rol.CLIENTE)
+				.stream()
+				.map(UsuarioResponse::de)
+				.toList();
+	}
+
+	@Override
 	public ViajeMonitoreoAdminResponse asignarViaje(AsignarViajeAdminRequest request) {
+		if (request.iniciarInmediatamente()) {
+			if (viajeRepository.existsByCamionIdAndEstadoIn(request.camionId(), EN_RUTA)) {
+				throw new ConflictoException("El camión seleccionado ya tiene un viaje activo en curso.");
+			}
+			if (viajeRepository.existsByChoferIdAndEstadoIn(request.choferId(), EN_RUTA)) {
+				throw new ConflictoException("El chofer seleccionado ya tiene un viaje activo en curso.");
+			}
+		}
+
 		ViajeRequest pedido = new ViajeRequest(
 			request.camionId(),
 			request.choferId(),
@@ -141,15 +179,21 @@ public class GestionAdminOperacionesService implements GestionAdminOperacionesUs
 	}
 
 	@Override
+	public void finalizarViaje(Long viajeId) {
+		viajeService.finalizar(viajeId);
+	}
+
+	@Override
 	public ViajeMonitoreoAdminResponse generarViajeSimuladoDemo() {
-		// 1. Obtener o crear un camión disponible
+		// 1. Obtener un camión DISPONIBLE (que no tenga viaje en ruta) o crear uno nuevo
 		List<Camion> camiones = camionRepository.findAll();
 		Camion camionElegido = camiones.stream()
 				.filter(c -> c.isActivo() && !viajeRepository.existsByCamionIdAndEstadoIn(c.getId(), EN_RUTA))
 				.findFirst()
 				.orElseGet(() -> {
+					long idNum = System.currentTimeMillis() % 1000;
 					Camion nuevo = new Camion();
-					nuevo.setPatente("DEMO" + (System.currentTimeMillis() % 1000));
+					nuevo.setPatente("DEMO" + idNum);
 					nuevo.setMarca("Mercedes-Benz");
 					nuevo.setModelo("Actros 2548");
 					nuevo.setAnio(2024);
@@ -158,19 +202,17 @@ public class GestionAdminOperacionesService implements GestionAdminOperacionesUs
 					return camionRepository.save(nuevo);
 				});
 
-		// 2. Obtener o crear un chofer
+		// 2. Obtener un chofer DISPONIBLE (que no tenga viaje en ruta) o crear uno nuevo
 		List<Usuario> choferes = usuarioRepository.findAllByRolAndActivoTrue(Rol.CHOFER);
 		Usuario choferElegido = choferes.stream()
-				.filter(ch -> !viajeRepository.findFirstByChoferIdAndEstadoInOrderByCreatedAtDesc(ch.getId(), EN_RUTA).isPresent())
+				.filter(ch -> !viajeRepository.existsByChoferIdAndEstadoIn(ch.getId(), EN_RUTA))
 				.findFirst()
 				.orElseGet(() -> {
-					if (!choferes.isEmpty()) {
-						return choferes.get(0);
-					}
+					long timestamp = System.currentTimeMillis() % 10000;
 					Usuario demo = new Usuario();
 					demo.setNombre("Conductor");
-					demo.setApellido("Demo");
-					demo.setEmail("chofer.demo" + System.currentTimeMillis() + "@omnitrucks.com");
+					demo.setApellido("Demo " + timestamp);
+					demo.setEmail("chofer.demo" + timestamp + "@omnitrucks.com");
 					demo.setPasswordHash(passwordEncoder.encode("chofer123"));
 					demo.setRol(Rol.CHOFER);
 					demo.setActivo(true);

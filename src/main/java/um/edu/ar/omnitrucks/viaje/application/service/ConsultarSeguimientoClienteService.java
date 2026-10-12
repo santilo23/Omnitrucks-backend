@@ -25,7 +25,7 @@ import um.edu.ar.omnitrucks.viaje.domain.port.ViajeSeguimientoRepositoryPort;
  * Aplica estrictamente las políticas de autorización RBAC y propiedad del envío.
  */
 @Service
-@Transactional(readOnly = true)
+@Transactional
 public class ConsultarSeguimientoClienteService implements ConsultarSeguimientoClienteUseCase {
 
 	private final ViajeSeguimientoRepositoryPort viajeSeguimientoRepository;
@@ -95,9 +95,12 @@ public class ConsultarSeguimientoClienteService implements ConsultarSeguimientoC
 			throw new AccesoDenegadoException("Los choferes no tienen acceso a la vista de cliente.");
 		}
 
-		// Rol Cliente: REGLA DE NEGOCIO ESTRICTA -> Solo puede acceder a viajes asignados a su cuenta
+		// Rol Cliente: Acceso a viajes asignados a su cuenta o vinculación automática por código único secreto
 		if (usuario.getRol() == Rol.CLIENTE) {
-			if (viaje.getCliente() == null || !viaje.getCliente().getId().equals(usuario.getId())) {
+			if (viaje.getCliente() == null) {
+				// El envío fue generado/simulado sin cliente previo. Al ingresar el código único, se asocia automáticamente a este cliente.
+				viaje.setCliente(usuario);
+			} else if (!viaje.getCliente().getId().equals(usuario.getId())) {
 				throw new AccesoDenegadoException("No tiene permisos para consultar este envío.");
 			}
 		}

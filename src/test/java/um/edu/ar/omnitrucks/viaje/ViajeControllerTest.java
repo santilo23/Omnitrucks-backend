@@ -167,6 +167,35 @@ class ViajeControllerTest {
 	}
 
 	@Test
+	void unChoferNoPuedeEstarEnDosViajesALaVez() throws Exception {
+		Camion otroCamion = new Camion();
+		otroCamion.setPatente("CD456EF");
+		otroCamion.setMarca("Volvo");
+		otroCamion.setModelo("FH540");
+		Long otroCamionId = camiones.save(otroCamion).getId();
+
+		Long primero = crearViaje();
+		mockMvc.perform(post("/api/viajes/" + primero + "/iniciar")).andExpect(status().isOk());
+
+		String segundoViajeJson = """
+			{"camionId": %d, "choferId": %d,
+			 "origenNombre": "Mendoza", "origenLat": -32.89, "origenLon": -68.84,
+			 "destinoNombre": "Córdoba", "destinoLat": -31.42, "destinoLon": -64.18,
+			 "descripcionCarga": "Vino fraccionado"}
+			""".formatted(otroCamionId, choferId);
+
+		String segundoResp = mockMvc.perform(
+				post("/api/viajes").contentType(MediaType.APPLICATION_JSON).content(segundoViajeJson))
+			.andExpect(status().isCreated())
+			.andReturn().getResponse().getContentAsString();
+		Long segundo = com.jayway.jsonpath.JsonPath.parse(segundoResp).read("$.id", Integer.class).longValue();
+
+		mockMvc.perform(post("/api/viajes/" + segundo + "/iniciar"))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.detail").value("El chofer Juan Pérez ya tiene un viaje en curso."));
+	}
+
+	@Test
 	void noSePuedeCrearUnViajeConUnCamionInexistente() throws Exception {
 		mockMvc.perform(post("/api/viajes").contentType(MediaType.APPLICATION_JSON).content("""
 				{"camionId": 999999, "choferId": %d,

@@ -20,10 +20,16 @@ public interface GestionAdminOperacionesUseCase {
 
 	List<UsuarioResponse> listarChoferes();
 
+	UsuarioResponse crearCliente(um.edu.ar.omnitrucks.admin.application.dto.CrearClienteRequest request);
+
+	List<UsuarioResponse> listarClientes();
+
 	ViajeMonitoreoAdminResponse asignarViaje(AsignarViajeAdminRequest request);
 
 	List<ViajeMonitoreoAdminResponse> listarViajesActivos();
 
 	ViajeMonitoreoAdminResponse generarViajeSimuladoDemo();
+
+	void finalizarViaje(Long viajeId);
 
 }
