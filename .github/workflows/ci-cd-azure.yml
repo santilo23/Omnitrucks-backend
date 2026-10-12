@@ -1,0 +1,108 @@
+name: CI/CD Pipeline - Azure Deployment
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  IMAGE_NAME: "omnitrucks-backend"
+
+jobs:
+  # ============================================================================
+  # FASE 1: INTEGRACIÓN CONTINUA (CI)
+  # Construye, ejecuta tests y audita vulnerabilidades con Snyk y Grype
+  # ============================================================================
+  ci-build-and-test:
+    name: Build, Test & Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 25 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      # 1. Ejecución de Tests Unitarios y de Integración (TDD)
+      - name: Ejecutar Tests Automatizados
+        run: ./mvnw test -B
+
+      # 2. Escaneo de Dependencias con Snyk (SCA)
+      - name: Escaneo de Vulnerabilidades en Dependencias (Snyk)
+        uses: snyk/actions/maven@master
+        continue-on-error: true # Permite auditar sin frenar en advertencias informativas
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # 3. Compilación del JAR
+      - name: Empaquetar JAR de Producción
+        run: ./mvnw package -DskipTests -B
+
+      # 4. Construcción de Imagen Docker en el Runner de CI
+      - name: Construir Imagen Docker en el Runner
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
+
+      # 5. Escaneo de Vulnerabilidades de la Imagen Docker con Grype (Anchore)
+      - name: Escanear Imagen Docker con Grype
+        uses: anchore/scan-action@v3
+        with:
+          image: "${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          fail-build: false # Configurable a true para frenar ante severidad crítica
+          severity-cutoff: high
+
+  # ============================================================================
+  # FASE 2: DESPLIEGUE CONTINUO (CD)
+  # Condicionado: Solo se ejecuta en push a 'main' o tag de versión 'v*.*.*'
+  # NUNCA se ejecuta en Pull Requests.
+  # ============================================================================
+  cd-deploy-azure:
+    name: Push to ACR & Deploy to Azure
+    needs: ci-build-and-test
+    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      # 1. Autenticación no interactiva en Azure mediante Service Principal
+      - name: Iniciar sesión en Azure (Service Principal)
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 2. Autenticación en Azure Container Registry (ACR)
+      - name: Iniciar sesión en ACR
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+
+      # 3. Construir, Etiquetar (SHA y latest) y Subir imagen a ACR
+      - name: Build, Tag & Push a Azure Container Registry
+        run: |
+          ACR_SERVER="${{ secrets.ACR_NAME }}.azurecr.io"
+          docker build -t $ACR_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                       -t $ACR_SERVER/${{ env.IMAGE_NAME }}:latest .
+          docker push $ACR_SERVER/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push $ACR_SERVER/${{ env.IMAGE_NAME }}:latest
+
+      # 4. Desplegar la imagen en Azure Web App for Containers
+      - name: Desplegar en Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          images: '${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}'
+
+      # 5. Verificación de Health Check post-deploy
+      - name: Verificar Health Check
+        run: |
+          echo "Esperando que la instancia inicie..."
+          sleep 35
+          curl -f https://${{ secrets.AZURE_WEBAPP_NAME }}.azurewebsites.net/actuator/health || exit 1
