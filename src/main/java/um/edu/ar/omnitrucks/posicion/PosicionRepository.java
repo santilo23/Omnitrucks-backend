@@ -46,4 +46,6 @@ public interface PosicionRepository extends JpaRepository<Posicion, Long> {
 		""")
 	List<Posicion> ultimasDeViajesEnEstados(@Param("estados") Collection<EstadoViaje> estados);
 
+	List<Posicion> findTop500ByViajeIdOrderByRegistradoEnAscIdAsc(Long viajeId);
+
 }

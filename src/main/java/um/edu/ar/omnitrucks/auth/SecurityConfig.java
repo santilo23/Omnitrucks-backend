@@ -51,6 +51,8 @@ public class SecurityConfig {
 				.requestMatchers("/api/admin/**", "/api/camiones/**").hasRole("ADMIN")
 				// Portal y seguimiento exclusivo para Clientes (supervisable por Administradores)
 				.requestMatchers("/api/cliente/**").hasAnyRole("CLIENTE", "ADMIN")
+				// Portal y mapa de ruta exclusivo para Choferes (supervisable por Administradores)
+				.requestMatchers("/api/chofer/**").hasAnyRole("CHOFER", "ADMIN")
 				// Resto de endpoints (incluyendo mapa, posiciones y viajes) requieren autenticación obligatoria
 				.anyRequest().authenticated()
 			)

@@ -32,4 +32,11 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
 	@EntityGraph(attributePaths = { "camion", "chofer", "cliente" })
 	List<Viaje> findAllByClienteIdOrderByCreatedAtDesc(Long clienteId);
 
+	@EntityGraph(attributePaths = { "camion", "chofer" })
+	java.util.Optional<Viaje> findFirstByChoferIdAndEstadoInOrderByCreatedAtDesc(
+			Long choferId, Collection<EstadoViaje> estados);
+
+	@EntityGraph(attributePaths = { "camion", "chofer" })
+	List<Viaje> findAllByChoferIdOrderByCreatedAtDesc(Long choferId);
+
 }
