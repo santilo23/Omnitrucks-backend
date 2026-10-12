@@ -83,6 +83,12 @@ public class ViajeService {
 		viaje.setSalidaProgramada(pedido.salidaProgramada());
 		viaje.setEstado(EstadoViaje.PROGRAMADO);
 
+		if (pedido.codigoSeguimiento() != null && !pedido.codigoSeguimiento().isBlank()) {
+			viaje.setCodigoSeguimiento(pedido.codigoSeguimiento().trim().toUpperCase());
+		} else {
+			viaje.setCodigoSeguimiento(um.edu.ar.omnitrucks.viaje.domain.generator.CodigoSeguimientoGenerator.generar());
+		}
+
 		return ViajeResponse.desde(viajes.save(viaje));
 	}
 

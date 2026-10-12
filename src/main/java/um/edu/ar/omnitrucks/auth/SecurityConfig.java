@@ -49,6 +49,8 @@ public class SecurityConfig {
 				.requestMatchers("/api/auth/**", "/actuator/**", "/error").permitAll()
 				// Gestión de camiones y panel de administración restringida a Administradores
 				.requestMatchers("/api/admin/**", "/api/camiones/**").hasRole("ADMIN")
+				// Portal y seguimiento exclusivo para Clientes (supervisable por Administradores)
+				.requestMatchers("/api/cliente/**").hasAnyRole("CLIENTE", "ADMIN")
 				// Resto de endpoints (incluyendo mapa, posiciones y viajes) requieren autenticación obligatoria
 				.anyRequest().authenticated()
 			)

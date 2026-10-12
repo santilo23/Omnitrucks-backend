@@ -26,4 +26,10 @@ public interface ViajeRepository extends JpaRepository<Viaje, Long> {
 
 	boolean existsByCamionIdAndEstadoIn(Long camionId, Collection<EstadoViaje> estados);
 
+	@EntityGraph(attributePaths = { "camion", "chofer", "cliente" })
+	java.util.Optional<Viaje> findByCodigoSeguimiento(String codigoSeguimiento);
+
+	@EntityGraph(attributePaths = { "camion", "chofer", "cliente" })
+	List<Viaje> findAllByClienteIdOrderByCreatedAtDesc(Long clienteId);
+
 }

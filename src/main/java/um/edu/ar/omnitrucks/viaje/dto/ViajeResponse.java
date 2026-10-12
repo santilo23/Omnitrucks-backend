@@ -9,6 +9,7 @@ import um.edu.ar.omnitrucks.viaje.Viaje;
 
 public record ViajeResponse(
 	Long id,
+	String codigoSeguimiento,
 	EstadoViaje estado,
 	CamionResumen camion,
 	PersonaResumen chofer,
@@ -45,6 +46,7 @@ public record ViajeResponse(
 	public static ViajeResponse desde(Viaje viaje) {
 		return new ViajeResponse(
 			viaje.getId(),
+			viaje.getCodigoSeguimiento(),
 			viaje.getEstado(),
 			CamionResumen.desde(viaje.getCamion()),
 			PersonaResumen.desde(viaje.getChofer()),

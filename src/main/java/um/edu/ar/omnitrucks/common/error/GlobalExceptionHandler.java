@@ -57,6 +57,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return problema;
 	}
 
+	@ExceptionHandler(AccesoDenegadoException.class)
+	ProblemDetail manejarAccesoDenegado(AccesoDenegadoException ex) {
+		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+		problema.setTitle("Acceso denegado");
+		return problema;
+	}
+
 	/**
 	 * Errores de Bean Validation en el cuerpo de la request. Además del mensaje
 	 * general, agrega un mapa {@code errores} campo → mensaje para que la app

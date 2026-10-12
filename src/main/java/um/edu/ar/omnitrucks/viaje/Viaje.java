@@ -87,6 +87,9 @@ public class Viaje {
 	@Column(name = "llegada_real")
 	private Instant llegadaReal;
 
+	@Column(name = "codigo_seguimiento", nullable = false, unique = true, length = 32)
+	private String codigoSeguimiento;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -95,6 +98,8 @@ public class Viaje {
 		if (createdAt == null) {
 			createdAt = Instant.now();
 		}
+		if (codigoSeguimiento == null || codigoSeguimiento.isBlank()) {
+			codigoSeguimiento = um.edu.ar.omnitrucks.viaje.domain.generator.CodigoSeguimientoGenerator.generar();
+		}
 	}
-
 }

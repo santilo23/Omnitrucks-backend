@@ -50,6 +50,9 @@ public record ViajeRequest(
 	@Size(max = 255, message = "La descripción de la carga es demasiado larga.")
 	String descripcionCarga,
 
+	@Size(max = 32, message = "El código de seguimiento no puede superar los 32 caracteres.")
+	String codigoSeguimiento,
+
 	Instant salidaProgramada
 
 ) {
