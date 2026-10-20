@@ -210,6 +210,50 @@ class AdminOperacionesControllerTest {
 
 	@Test
 	@WithMockUser(roles = "ADMIN")
+	@DisplayName("Admin puede asignar viaje asociando un cliente y el viaje queda vinculado exitosamente")
+	void adminPuedeAsignarViajeConClienteAsociado() throws Exception {
+		Usuario cliente = new Usuario();
+		cliente.setNombre("Empresa");
+		cliente.setApellido("Acme");
+		cliente.setEmail("acme@test.com");
+		cliente.setPasswordHash(passwordEncoder.encode("clave123"));
+		cliente.setRol(Rol.CLIENTE);
+		cliente.setActivo(true);
+		cliente = usuarioRepository.save(cliente);
+
+		String json = """
+			{
+				"camionId": %d,
+				"choferId": %d,
+				"clienteId": %d,
+				"origenNombre": "Buenos Aires (Terminal Retiro)",
+				"origenLat": -34.5888,
+				"origenLon": -58.3750,
+				"destinoNombre": "Rosario (Puerto)",
+				"destinoLat": -32.9468,
+				"destinoLon": -60.6393,
+				"descripcionCarga": "Carga de alimentos no perecederos",
+				"iniciarInmediatamente": true
+			}
+			""".formatted(camion.getId(), chofer.getId(), cliente.getId());
+
+		mockMvc.perform(post("/api/admin/viajes")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(json))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.codigoSeguimiento", notNullValue()))
+			.andExpect(jsonPath("$.estado", is("EN_CURSO")))
+			.andExpect(jsonPath("$.choferNombre", is("Roberto Galán")))
+			.andExpect(jsonPath("$.camionPatente", is("AD999ZZ")));
+
+		var viajes = viajeRepository.findAll();
+		assertThat(viajes).hasSize(1);
+		assertThat(viajes.get(0).getCliente()).isNotNull();
+		assertThat(viajes.get(0).getCliente().getId()).isEqualTo(cliente.getId());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
 	@DisplayName("Admin puede listar choferes en conducción mostrando el código de seguimiento para el cliente")
 	void adminPuedeVerChoferesEnConduccionConCodigoParaCliente() throws Exception {
 		// Asignamos e iniciamos un viaje primero

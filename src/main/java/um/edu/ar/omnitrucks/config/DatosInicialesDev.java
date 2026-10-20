@@ -114,7 +114,35 @@ public class DatosInicialesDev implements CommandLineRunner {
 		cliente.setActivo(true);
 		usuarios.save(cliente);
 
-		// 5. Camión de prueba
+		// Cliente 2 adicional (Disponible)
+		Usuario cliente2 = usuarios.findByEmail("distribuidora@cliente.com").orElseGet(() -> {
+			Usuario u = new Usuario();
+			u.setEmail("distribuidora@cliente.com");
+			u.setNombre("Distribuidora");
+			u.setApellido("Los Andes S.A.");
+			u.setRol(Rol.CLIENTE);
+			u.setActivo(true);
+			return u;
+		});
+		cliente2.setPasswordHash(passwordEncoder.encode(clientePass));
+		cliente2.setActivo(true);
+		usuarios.save(cliente2);
+
+		// Chofer 2 adicional (Disponible)
+		Usuario chofer2 = usuarios.findByEmail("chofer2@omnitrucks.com").orElseGet(() -> {
+			Usuario u = new Usuario();
+			u.setEmail("chofer2@omnitrucks.com");
+			u.setNombre("Carlos");
+			u.setApellido("Rodríguez");
+			u.setRol(Rol.CHOFER);
+			u.setActivo(true);
+			return u;
+		});
+		chofer2.setPasswordHash(passwordEncoder.encode(choferPass));
+		chofer2.setActivo(true);
+		usuarios.save(chofer2);
+
+		// 5. Camiones de prueba (uno en ruta, dos disponibles para asignar)
 		Camion camion1 = camiones.findByPatente("AF123CD").orElseGet(() -> {
 			Camion c = new Camion();
 			c.setPatente("AF123CD");
@@ -122,6 +150,26 @@ public class DatosInicialesDev implements CommandLineRunner {
 			c.setModelo("R450");
 			c.setAnio(2022);
 			c.setCapacidadKg(32000);
+			return camiones.save(c);
+		});
+
+		camiones.findByPatente("AG456HI").orElseGet(() -> {
+			Camion c = new Camion();
+			c.setPatente("AG456HI");
+			c.setMarca("Mercedes-Benz");
+			c.setModelo("Actros 2548");
+			c.setAnio(2023);
+			c.setCapacidadKg(30000);
+			return camiones.save(c);
+		});
+
+		camiones.findByPatente("AH789JK").orElseGet(() -> {
+			Camion c = new Camion();
+			c.setPatente("AH789JK");
+			c.setMarca("Volvo");
+			c.setModelo("FH 540");
+			c.setAnio(2024);
+			c.setCapacidadKg(35000);
 			return camiones.save(c);
 		});
 
@@ -142,6 +190,7 @@ public class DatosInicialesDev implements CommandLineRunner {
 			viaje.setSalidaProgramada(Instant.now().minusSeconds(1800));
 			viaje.setSalidaReal(Instant.now().minusSeconds(1800));
 			viaje.setLlegadaEstimada(Instant.now().plusSeconds(14400));
+			viaje.setCodigoSeguimiento("TRK-DEMO01");
 			viajes.save(viaje);
 
 			log.info("Viaje inicial configurado (Camión: {}, Chofer: {}, Cliente: {})",
