@@ -1,25 +1,34 @@
-# Base de datos para desarrollo, como alternativa a instalar PostgreSQL.
+# ==============================================================================
+# Omnitrucks - Orquestación de Contenedores en Desarrollo (Separación Frontend/Backend)
+# ==============================================================================
+# Cumple con el principio de separación de contenedores para microservicios y 12-Factor App:
+#   1. Contenedor de Base de Datos: PostgreSQL 17
+#   2. Contenedor de Backend: Spring Boot 4.1 + OpenTelemetry Agent (Java 25)
+#   3. Contenedor de Frontend: React Native / Expo Web + Servidor Nginx Alpine
 #
-# El proyecto usa por defecto el PostgreSQL instalado en la máquina (puerto
-# 5432). Este contenedor se expone en el 5433 para que ambos convivan, y para
-# usarlo hay que arrancar la aplicación con:
-#
-#   DB_URL=jdbc:postgresql://localhost:5433/omnitrucks
-#
-# Levantar:  docker compose up -d
-# Apagar:    docker compose down
-# Borrar los datos también:  docker compose down -v
+# Uso:
+#   Levantar todo el stack:         docker compose up -d
+#   Levantar solo la base de datos: docker compose up -d db
+#   Ver logs en tiempo real:        docker compose logs -f
+#   Detener todo:                   docker compose down
+#   Detener y borrar datos:         docker compose down -v
+# ==============================================================================
+
 services:
+  # ----------------------------------------------------------------------------
+  # 1. Base de Datos Relacional (PostgreSQL)
+  # ----------------------------------------------------------------------------
   db:
     image: postgres:17
     container_name: omnitrucks-db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: omnitrucks
       POSTGRES_USER: omnitrucks
       POSTGRES_PASSWORD: omnitrucks
       TZ: UTC
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - omnitrucks_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,6 +36,57 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - omnitrucks-net
+
+  # ----------------------------------------------------------------------------
+  # 2. Backend API (Spring Boot + Graceful Shutdown + OpenTelemetry Agent)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: omnitrucks-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://db:5432/omnitrucks
+      DB_USERNAME: omnitrucks
+      DB_PASSWORD: omnitrucks
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123!}
+      SEED_CHOFER_PASSWORD: ${SEED_CHOFER_PASSWORD:-Chofer123!}
+      SEED_CLIENTE_PASSWORD: ${SEED_CLIENTE_PASSWORD:-Cliente123!}
+      # Si se define la cadena de Azure Application Insights, el agente OTel se activa:
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - omnitrucks-net
+
+  # ----------------------------------------------------------------------------
+  # 3. Frontend Web (React Native / Expo Web + Nginx Alpine)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../Omnitrucks-frontend
+      dockerfile: Dockerfile
+      args:
+        EXPO_PUBLIC_API_URL: http://localhost:8080
+    container_name: omnitrucks-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - omnitrucks-net
 
 volumes:
   omnitrucks_data:
+
+networks:
+  omnitrucks-net:
+    driver: bridge

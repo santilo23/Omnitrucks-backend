@@ -27,9 +27,14 @@ spring:
       # descarga un lote acumulado cuando la recupera. Un solo endpoint para
       # los dos casos.
       accept-single-value-as-array: true
+  lifecycle:
+    # Tiempo de gracia para completar peticiones activas, commits y cierre del pool HikariCP (Factor 9)
+    timeout-per-shutdown-phase: 20s
 
 server:
   port: 8080
+  # Apagado seguro: rechaza nuevas peticiones y drena las existentes antes de finalizar
+  shutdown: graceful
 
 management:
   endpoints:
